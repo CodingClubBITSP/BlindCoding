@@ -1,281 +1,294 @@
-// var request = require('request');
+let ctrlDown = false;
+let ctrlKey = 17, cmdKey = 91, vKey = 86, cKey = 67;
+let qNo = 0;
+let languageIDs = JSON.parse("[{\"id\":45,\"name\":\"Assembly (NASM 2.14.02)\"},{\"id\":46,\"name\":\"Bash (5.0.0)\"},{\"id\":47,\"name\":\"Basic (FBC 1.07.1)\"},{\"id\":48,\"name\":\"C (GCC 7.4.0)\"},{\"id\":52,\"name\":\"C++ (GCC 7.4.0)\"},{\"id\":49,\"name\":\"C (GCC 8.3.0)\"},{\"id\":53,\"name\":\"C++ (GCC 8.3.0)\"},{\"id\":50,\"name\":\"C (GCC 9.2.0)\"},{\"id\":54,\"name\":\"C++ (GCC 9.2.0)\"},{\"id\":51,\"name\":\"C# (Mono 6.6.0.161)\"},{\"id\":55,\"name\":\"Common Lisp (SBCL 2.0.0)\"},{\"id\":56,\"name\":\"D (DMD 2.089.1)\"},{\"id\":57,\"name\":\"Elixir (1.9.4)\"},{\"id\":58,\"name\":\"Erlang (OTP 22.2)\"},{\"id\":44,\"name\":\"Executable\"},{\"id\":59,\"name\":\"Fortran (GFortran 9.2.0)\"},{\"id\":60,\"name\":\"Go (1.13.5)\"},{\"id\":61,\"name\":\"Haskell (GHC 8.8.1)\"},{\"id\":62,\"name\":\"Java (OpenJDK 13.0.1)\"},{\"id\":63,\"name\":\"JavaScript (Node.js 12.14.0)\"},{\"id\":64,\"name\":\"Lua (5.3.5)\"},{\"id\":65,\"name\":\"OCaml (4.09.0)\"},{\"id\":66,\"name\":\"Octave (5.1.0)\"},{\"id\":67,\"name\":\"Pascal (FPC 3.0.4)\"},{\"id\":68,\"name\":\"PHP (7.4.1)\"},{\"id\":43,\"name\":\"Plain Text\"},{\"id\":69,\"name\":\"Prolog (GNU Prolog 1.4.5)\"},{\"id\":70,\"name\":\"Python (2.7.17)\"},{\"id\":71,\"name\":\"Python (3.8.1)\"},{\"id\":72,\"name\":\"Ruby (2.7.0)\"},{\"id\":73,\"name\":\"Rust (1.40.0)\"},{\"id\":74,\"name\":\"TypeScript (3.7.4)\"}]");
+let timerCont = document.getElementById('timer');
+let s = 0, m = 0;
+let timerId;
+const _totalNumQues = 5;
+let codeMap= new Map();
 
 $(document).ready(function() {
-	var inp = document.getElementsByClassName('noselect')[0];
-getQuestion(0);
-inp.addEventListener('select', function() {
-  this.selectionStart = this.selectionEnd;
-}, false);
-	
-	document.addEventListener('contextmenu', event => event.preventDefault());
-    var ctrlDown = false,
-        ctrlKey = 17,
-        cmdKey = 91,
-        vKey = 86,
-        cKey = 67;
+  for(var i=0; i<_totalNumQues; i++){
+    codeMap.set(i, null)
+  }
+  populateLangs();
+  getQuestion(0);
+  disableCopyPaste();
+  leaderbInit();
+  increaseTime();
+  hideCode();
+  addResizeEvent();
+  showBtnInit();
+  sideNavInit();
+});
 
-    $(document).keydown(function(e) {
-        if (e.keyCode == ctrlKey || e.keyCode == cmdKey) ctrlDown = true;
-    }).keyup(function(e) {
-        if (e.keyCode == ctrlKey || e.keyCode == cmdKey) ctrlDown = false;
-    });
+function showBtnInit(){
+  document.getElementById('showCode').addEventListener('click', () => {
+    showCode()
+  });
+}
 
-    $(".no-copy-paste").keydown(function(e) {
-        if (ctrlDown && (e.keyCode == vKey || e.keyCode == cKey)) return false;
-    });
-    
-    // Document Ctrl + C/V 
-    $(document).keydown(function(e) {
-        if (ctrlDown && (e.keyCode == cKey)) console.log("Document catch Ctrl+C");
-        if (ctrlDown && (e.keyCode == vKey)) console.log("Document catch Ctrl+V");
-    });
+function addResizeEvent(){
+  window.onresize = function() {
+    if ((window.outerHeight - window.innerHeight) > 100) {
+      logout('screen-resize')
+    }
+  }
+}
 
+function leaderbInit(){
   let i = 0;  
   $('.leaderboard-icon').click(function() {
-    $('.leaderboard').fadeToggle();
+    $('.leaderboard').fadeToggle(650, "swing");
     if (i === 0) {
       $('.li').html('cancel');
       i = 1
+      getLeaderboard();
       // insert_chart
     }
     else {
       $('.li').html('insert_chart')
       i = 0;
     }
-  })
-});
-const languages = ['c','java','cpp','cpp14','python2','python3'];
+  });
+}
+function disableCopyPaste(){
+  var inp = document.getElementsByClassName('noselect')[0];
+  inp.addEventListener('select', function() {
+    this.selectionStart = this.selectionEnd;
+  }, false);
+  document.addEventListener('contextmenu', event => event.preventDefault());
+    $(document).keydown(function(e) {
+        // console.log('Key pressed: ', e.keyCode);
+        if (e.keyCode == ctrlKey || e.keyCode == cmdKey) ctrlDown = true;
+    }).keyup(function(e) {
+        // console.log('Key released: ', e.keyCode);
+        if (e.keyCode == ctrlKey || e.keyCode == cmdKey) ctrlDown = false;
+    });
 
-const versions = ['0','1','2'];
-
-var code = `
-#include <stdio.h>
-int main(){
-  printf("Hello World num entered is :");
-  return 0;
-}`;
-
-let langNo = 0;
-let versionNo = 0;
-let input = '1';
-let output = '';
-let qNo=0;
-let tc1 = '';
-let tc2 = '';
-let tc3 = '';
-
-const setCode = (prog)=>{
-  code = prog;
-};
-
-const getCode = () => {
-  return code;
-};
-
-
-const setLanguage = (langNum) => {
-  langNo = langNum;
-};
-
-const getLanguage = () => {
-  return langNo;
-};
-
-
-const setVersion = (vrsn) => {
-  versionNo = vrsn;
-};
-
-const getVersion = () => {
-  return versions[versionNo];
+    $(".no-copy-paste").keydown(function(e) {
+        // console.log('Key pressed inside editor: ', e.keyCode);
+        if(ctrlDown && (e.keyCode == cKey))
+        { 
+          console.log("Document catch Ctrl+C");
+        }
+        if(ctrlDown && (e.keyCode == vKey)){
+          console.log("Document catch Ctrl+V");
+        }
+        if (ctrlDown && (e.keyCode == vKey || e.keyCode == cKey)){
+          // console.log('copy-paste');
+          return false;
+       }
+    });
 }
 
-const setCustomInput = (inp)=>{
-  input = inp;
+function populateLangs()
+{
+  console.log('populating languages...');
+  
+  let selectField = document.getElementById('langSelect');
+  for(element of languageIDs)
+  {
+     var opt = document.createElement("option");
+     opt.value= element['id'];
+     opt.innerHTML = element['name'];
+     selectField.appendChild(opt);
+  }
 }
 
-const getCustomInput = ()=>{
-  return input;
+function logout(reason){
+  if(reason == 'Finished'){
+    Swal.fire(
+      'Congratulations',
+      'You have successfully attempted all the questions',
+      'success'
+    );
+  }
+  else if(reason == 'screen-resize'){
+    Swal.fire(
+      'Sorry',
+      "You will be logged out since you didn't follow the instructions",
+      'error'
+    );
+  }
+  window.location.href = "/logout";
 }
 
-const setOutput = (outp) => {
-  console.log('Result:',outp);
-  output = outp;
-};
+function resetTime(){
+  s = 0;
+  m = 0;
+}
 
-const getOutput = () => {
-  return output;
-};
+function setOutput(outp) {
+  document.getElementById("compilerOutput").value = outp;
+}
 
-const runCode = () => {
-  stopClock();
-	console.log('time elapsed is: ',start);
-  let prog = document.getElementById("codeInput").value;
-  setCode(prog);
+function setScore(score){
+  document.getElementById('score').innerHTML = score;
+}
 
-  let lang = document.getElementById("langSelect").value;
-  setLanguage(lang);
+function getOutput(){
+  return document.getElementById("compilerOutput").value;
+}
 
-  console.log('Language: ',getLanguage(),'code: ',getCode());
+function increaseQNum(){
+  qNo = (getQNum() + 1) % _totalNumQues;
+}
 
+function getQNum() { 
+  return qNo;
+}
 
-  var program = {
-      script : getCode(),
-      language: getLanguage(),
-      versionIndex: getVersion(),
-      clientId: "222a2ef84f6881409d32ae21369d1a32",
-   	  clientSecret:"67872757630a355db890ee74b6b20926cb9e025dbb444182df2bd2700fc64af1",
-      stdin: getCustomInput(), //to give custom input
-	  qNo: getQNum(),
-	  timeElapsed: start
+function getCode(){
+  return document.getElementById("codeInput").value;
+}
+
+function getLanguage(){
+  return document.getElementById("langSelect").value;
+}
+
+function disableRun(){
+  document.getElementById('runBtn').disabled = true;
+}
+
+function enableRun(){
+  document.getElementById('runBtn').disabled = false;
+}
+
+function runCode(){
+  disableRun();
+  pauseTime();
+  console.log(`Time elapsed is: ${m} minutes and ${s} seconds`);
+
+  let prog = getCode();
+
+  let lang = getLanguage();
+
+  let time = m * 60 + s;
+
+  let program = {
+      source_code : prog,
+      language_id: lang,
+      qNo: getQNum(),
+      timeElapsed: time
   };
 
-  //just send this object to jdoodle url and send back the response
-  // for all test cases backend checks the output and returns no of test cases cleared
-  let resp = sendRequest('POST','runCode/',program);
-	
-
-};
+  sendRequest('POST', 'runCode/', program).then(
+    function(response){
+      response = JSON.parse(response);
+      console.log('Compiler Call Response: ', response);
+      setOutput(response['stdout']);
+      setScore(response['score']);
+      if(getOutput() == 'Correct Answer')
+      {
+        if(response['completedGame'] == 'true'){
+          logout('Finished');
+        }
+        resetTime();
+        increaseQNum();
+        getQuestion(qNo);
+      }
+      increaseTime();
+      enableRun();
+    }
+  ).catch(
+    function(error){
+      increaseTime();
+      enableRun();
+      console.error(error);
+    }
+  );
+}
 
 function getCookie(name) {
   var v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
   return v ? v[2] : null;
 }
 
-
-const sendRequest = (method,url,data) => {   
- var csrf_token = getCookie('csrftoken');
-  var ourRequest = new XMLHttpRequest();
-  ourRequest.open(method,url, true);
-  ourRequest.setRequestHeader("Content-type", "application/json");
-  ourRequest.setRequestHeader("X-CSRFToken", csrf_token);
-  ourRequest.onload = function() {
-    if (ourRequest.status >= 200 && ourRequest.status < 400) {
-		if(url == 'runCode/'){
-		  let recievedData = JSON.parse(ourRequest.responseText);
-		  setOutput(recievedData);
-		  document.getElementById("compilerOutput").value = getOutput().output;
-		  document.getElementById('score').innerHTML = recievedData['score'];
-		  console.log(recievedData['score']);
-		  if(getOutput().output == 'Correct Answer')
-			  start = 0;
-//		  startClock();
-		  return recievedData;
-		}
-		else{
-			let recievedData = JSON.parse(ourRequest.responseText);
-			let inpt = recievedData['sampIn'].split(' ');
-			let inStr = '';
-			for(let i=0;i<inpt.length;i++)
-			{
-				inStr+=inpt[i];
-				inStr+='\n';
-			}
-			let que = recievedData['question'] + '<br><br>'+'Sample Input'+'<br>'+recievedData['sampTCNum']+'<br>'+inStr+'<br><br>'+'Sample Output'+'<br>'+recievedData['sampleOut'];
-			console.log('hi ',recievedData);
-  			document.getElementsByClassName('left')[0].innerHTML=que;
-			qNo = recievedData['qNo'];
-			console.log(qNo);
-			console.log(recievedData['userScore']);
-			document.getElementById('score').innerHTML = recievedData['userScore'];
-			return recievedData;
-		}
+function sendRequest(type, url, data){
+  let request = new XMLHttpRequest();
+  let csrftoken = getCookie("csrftoken");
+  return new Promise(function(resolve, reject){
+      request.onreadystatechange = () => {
+          if (request.readyState !== 4) return;
+          // Process the response
+    if (request.status >= 200 && request.status < 300) {
+              // If successful
+      resolve(request.responseText);
     } else {
-      // Nothing
-		// startClock();
+      // If failed
+      reject({
+        status: request.status,
+        statusText: request.statusText
+      });
     }
-  }
-  ourRequest.onerror = function() {
-    // Nothing
-//	  startClock();
-  }
-  console.log(JSON.stringify(data));
-  ourRequest.send(JSON.stringify(data));
-};
-
-
-const getQuestion = (queNum) => {
-//  start = 0;
-  // startClock();
-  let data = {
-    queNum : queNum
-  };
-  sendRequest('POST','/question/',data);
-};
-
-function getQNum(){
-	return qNo;
+      };
+      // Setup our HTTP request
+  request.open(type || "GET", url, true);
+      // Add csrf token
+      request.setRequestHeader("X-CSRFToken", csrftoken);
+      // Send the request
+      request.send(JSON.stringify(data));
+  });
+  
 }
 
-window.onresize = function(){
-    if ((window.outerHeight - window.innerHeight) > 100) {
-        // console was opened (or screen was resized)
-		alert("Sorry!! you will be logged out since you didn't follow instructions");
-		window.location.href="/logout"
+function getQuestion(queNum){
+
+  codeMap.set(qNo, getCode())
+  sendRequest('POST', '/question/', { queNum }).then(
+    function(response){
+      response = JSON.parse(response);
+        let inpt = response['sampIn'].split(' ');
+        let inStr = '';
+        for(let i = 0; i < inpt.length;i++)
+        {
+          inStr += inpt[i];
+          inStr += '\n';
+        }
+        let que = response['question'] + '<br><br>'+'Sample Input'+'<br>'+response['sampTCNum']+'<br>'+inStr+'<br><br>'+'Sample Output'+'<br>'+response['sampleOut'];
+        document.getElementsByClassName('qno')[0].innerHTML='Q. '+(queNum+1);
+        document.getElementsByClassName('left')[0].innerHTML=que;
+        qNo = response['qNo'];
+        document.getElementById('score').innerHTML = response['userScore'];
+        var s= document.getElementById("codeInput");
+        s.value= codeMap.get(queNum)
     }
+  ).catch(
+    function(error){
+      increaseTime();
+      console.error(error);
+    }
+  );
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-function getCookie(name) {
-  var v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
-  return v ? v[2] : null;
-}
 function login() {
-  var csrf_token = getCookie('csrftoken');
-  var ourRequest = new XMLHttpRequest();
-  ourRequest.open("POST","login/", true);
-  ourRequest.setRequestHeader("X-CSRFToken", csrf_token);
-  ourRequest.setRequestHeader("Content-type", "application/json");
-  ourRequest.onload = function() {
-    if (ourRequest.status >= 200 && ourRequest.status < 400) {
-		;
-    } else {
+  sendRequest('POST', 'login/', '').then(
+    function(resp){
+      console.log(resp);
     }
-  }
-  ourRequest.onerror = function() {
-    // Nothing
-  }
-  ourRequest.send();
+  ).catch(
+    function(error){
+      console.error(error);
+    }
+  );
 }
 
-window.onload = () => {
-    // startClock();
-}
-
-function showAbout() {
-    document.getElementsByClassName('about')[0].style.display = 'flex';
+function showInstructions() {
+    document.getElementsByClassName('instructions')[0].style.display = 'flex';
     document.getElementsByClassName('backdrop')[0].style.display = 'block';
 }
 
-function closeAbout() {
-    document.getElementsByClassName('about')[0].style.display = 'none';
+function closeInstructions() {
+    document.getElementsByClassName('instructions')[0].style.display = 'none';
     document.getElementsByClassName('backdrop')[0].style.display = 'none';
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     var elems = document.querySelectorAll('select');
-	console.log('hikljhg');
-//    var instances = M.FormSelect.init(elems, options);
-  });
-
-  // Or with jQuery
-
-  $(document).ready(function(){
-    $('select').formSelect();
-  });
-
+});
+  
   $(document).delegate('#codeInput', 'keydown', function(e) {
     var keyCode = e.keyCode || e.which;
   
@@ -295,56 +308,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+function sideNavInit(){
   let hamburger = document.querySelector(".hamburger");
   const title = document.querySelector('.title')
 
-hamburger.onclick = function(e){
-  e.preventDefault;
-  if(hamburger.classList.contains("active")){
-    hamburger.classList.remove("active");
-    hamburger.style.transform = 'translateX(0)';
-    document.getElementById('sidenav').style.transform = 'translateX(-100%)';
-    title.style.left = 'calc(3vh + 50px)'
-  }else{
-    hamburger.classList.add("active");
-    hamburger.style.transform = 'translateX(21vw)';
-    document.getElementById('sidenav').style.transform = 'translateX(0)';
-    title.style.left = '3vh'
+  // Side-nav event handler
+  hamburger.onclick = function(e) {
+    e.preventDefault;
+    if (hamburger.classList.contains("active")) {
+      hamburger.classList.remove("active");
+      hamburger.style.transform = 'translateX(0)';
+      document.getElementById('sidenav').style.transform = 'translateX(-100%)';
+      title.style.left = 'calc(3vh + 50px)'
+    }
+    else {
+      hamburger.classList.add("active");
+      hamburger.style.transform = 'translateX(21vw)';
+      document.getElementById('sidenav').style.transform = 'translateX(0)';
+      title.style.left = '3vh'
+    }
   }
 }
 
-// function Submit() {
-    
-// }
-
-// let start = 0;
-// let timerInterval;
-let timerCont = document.getElementById('timer');
-// function increaseTime() 
-// function startClock() {
-//     timerInterval = setInterval(function() {
-//       start++;
-//       if(start >= 60) {
-//           if(start%60>=10) {
-//               timerCont.innerHTML = "0" + Number(Math.floor(start/60)) + ':' + Number(start%60);
-//           } else {
-//               timerCont.innerHTML = "0" + Number(Math.floor(start/60)) + ':0' + Number(start%60);
-//           }
-//       } else if(start < 60 && start >= 10){
-//           timerCont.innerHTML = '00:' + Number(start);
-//       } else if(start < 10) {
-//           timerCont.innerHTML = '00:0' + Number(start%60);
-//       }
-//     }, 1000);
-// }
-
-// function stopClock() {
-//     clearInterval(timerInterval);
-// }
-
-let s = 0, m = 0;
 function increaseTime() {
-  setInterval(function() {
+    timerId = setInterval(function() {
     if (s > 59){
       s -= 60;
       m += 1;
@@ -369,8 +356,84 @@ function increaseTime() {
 
     s++;
   }, 1000)
-
-
 }
 
-increaseTime()
+// Pause time function
+function pauseTime() {
+  clearInterval(timerId);
+}
+
+// Won't allow user to cheat by changing text-color
+let codeIntervalId;
+let clicks = 0;
+const hideCode = () => {
+  codeIntervalId = setInterval(() => document.getElementById('codeInput').style.color = 'black', 200);
+}
+
+function increaseClicks(){
+  pauseTime();
+  let data = {
+    'clicks' : clicks+1
+  };
+  sendRequest('POST', '/increaseClicks/', data).then(
+    function(response){
+      increaseTime();
+    }
+  ).catch(
+    function(error){
+      increaseTime();
+      console.error(error);
+    }
+  );
+}
+
+const showCode = () => {
+  pauseTime();
+  sendRequest('GET', '/getChancesUsed/', null).then(
+    function(response){
+      response = JSON.parse(response);
+      clicks = response['chancesUsed'];
+      const box = document.getElementById('codeInput');
+      if (box.disabled === false) {
+        // Functionality won't be achieved after two clicks
+        if (clicks >= 2) {
+          // box.disabled = false;
+          // alert('You have used up your time!');
+          Swal.fire(
+            'Sorry..',
+            'You have used up your time!',
+            'error'
+          );
+          return;
+        }
+        else {
+          // Disable button and show code for 5 seconds
+          box.disabled = true;
+          clearInterval(codeIntervalId);
+          box.style.color = 'white';
+          setTimeout(() => {
+            hideCode()
+            box.disabled = false;
+          }, 5000);
+        }
+        increaseClicks();
+      }
+      else{
+        // alert('You have used up your time!');
+        Swal.fire(
+          'Sorry..',
+          'You have used up your time!',
+          'error'
+        );
+      }
+    }
+  ).catch(
+    function(error){
+      increaseTime();
+      console.error(error);
+    }
+  );
+}
+$(document).ready(function(){
+  $('select').formSelect();
+});
